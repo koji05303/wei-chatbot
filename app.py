@@ -42,7 +42,7 @@ def load_history(date_str):
 with st.sidebar:
     st.title("🔐 認證身分")
     password = st.text_input("輸入紀念日：", type="password")
-    if password != "0520":
+    if password != "1028":
         st.info("請輸入正確密碼")
         st.stop()
 
