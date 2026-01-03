@@ -14,10 +14,6 @@ st.set_page_config(page_title="鼻鼻北北的小空間", page_icon="❤️", la
 st.markdown("""
     <style>
     /* 全局背景與字體 */
-    .stApp {
-        background-color: #f0f2f5;
-    }
-    
     /* 側邊欄樣式 */
     section[data-testid="stSidebar"] {
         background-color: #ffffff;
