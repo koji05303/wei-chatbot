@@ -10,10 +10,10 @@ import io
 # --- 1. 基本設定與聊天軟體風格 CSS ---
 st.set_page_config(page_title="鼻鼻北北的小空間", page_icon="❤️", layout="centered")
 
-# 注入 CSS：保留圓角與陰影，但不強制背景色，讓它跟隨預設模式
+# 注入 CSS
 st.markdown("""
     <style>
-    /* 側邊欄樣式 - 移除強制背景色 */
+    /* 側邊欄樣式 */
     section[data-testid="stSidebar"] {
         border-right: 1px solid #ddd;
     }
@@ -26,14 +26,23 @@ st.markdown("""
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
     
-    /* 隱藏頂部裝飾 */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
+    /* 修正 Bug 2: 移除對 header 的隱藏，否則側邊欄按鈕會不見 */
+    /* header {visibility: hidden;}  <-- 這行是兇手，先註解掉 */
+    
+    #MainMenu {visibility: hidden;} /* 隱藏右上角三點選單 */
+    footer {visibility: hidden;}    /* 隱藏頁尾 "Made with Streamlit" */
 
     /* 輸入框邊距優化 */
     .stChatInputContainer {
         padding-bottom: 20px;
+    }
+    
+    /* 修正 Bug 1: 優化九宮格按鈕樣式 */
+    div.stButton > button {
+        width: 100%;
+        border-radius: 10px;
+        height: 50px;
+        font-size: 20px;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -100,18 +109,30 @@ def create_zip_of_history():
 # --- 4. 解鎖畫面 ---
 if not st.session_state.authenticated:
     st.write("<h1 style='text-align: center; color: #ff4b4b;'>❤️ 鼻鼻北北的小空間</h1>", unsafe_allow_html=True)
+    
+    # 顯示密碼圓點
     pass_display = " ".join(["●" if i < len(st.session_state.pass_input) else "○" for i in range(4)])
-    st.write(f"<h2 style='text-align: center; letter-spacing: 10px;'>{pass_display}</h2>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([1, 1, 1])
+    st.write(f"<h2 style='text-align: center; letter-spacing: 10px; margin-bottom: 30px;'>{pass_display}</h2>", unsafe_allow_html=True)
+    
+    # --- 修正 Bug 1: 改用更穩定的九宮格排版 ---
     keys = [["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"], ["清空", "0", "←"]]
-    for j, row in enumerate(keys):
-        for k, key in enumerate(row):
-            with [col1, col2, col3][k]:
+    
+    for row in keys:
+        cols = st.columns(3) # 每一列重新建立 3 個欄位，確保對齊
+        for i, key in enumerate(row):
+            with cols[i]:
                 if st.button(key, use_container_width=True, key=f"key_{key}"):
-                    if key == "清空": st.session_state.pass_input = ""
-                    elif key == "←": st.session_state.pass_input = st.session_state.pass_input[:-1]
-                    elif len(st.session_state.pass_input) < 4: st.session_state.pass_input += key
-                    st.rerun()
+                    if key == "清空": 
+                        st.session_state.pass_input = ""
+                        st.rerun()
+                    elif key == "←": 
+                        st.session_state.pass_input = st.session_state.pass_input[:-1]
+                        st.rerun()
+                    elif len(st.session_state.pass_input) < 4: 
+                        st.session_state.pass_input += key
+                        st.rerun()
+
+    st.write("---")
     if st.button("🔓 進入聊天室", use_container_width=True):
         if st.session_state.pass_input == "1028":
             st.session_state.authenticated = True
@@ -174,7 +195,7 @@ AVATAR_GF = "thumbnails/gf.png"
 for msg in st.session_state.messages:
     is_ai = msg["role"] == "assistant"
     avatar = AVATAR_ME if is_ai else AVATAR_GF
-    name = "北北 立瑋" if is_ai else "鼻鼻 小鼻"
+    name = "北北 2-028 江立瑋" if is_ai else "鼻鼻 小鼻"
     
     with st.chat_message(msg["role"], avatar=avatar):
         st.markdown(f"**{name}** <span style='color:gray; font-size:0.8em;'>{msg.get('time', '')}</span>", unsafe_allow_html=True)
@@ -189,13 +210,15 @@ if view_date == today_str:
         
         # 1. 先加入使用者訊息
         st.session_state.messages.append({"role": "user", "content": prompt, "time": cur_time})
-        st.rerun() # 立即渲染顯示使用者的對話氣泡
+        st.rerun() 
 
-# 2. 處理助理回應 (如果最後一則是使用者發的)
+# 2. 處理助理回應
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
     with st.chat_message("assistant", avatar=AVATAR_ME):
         try:
-            # 準備歷史紀錄，確保角色交替：user -> model -> user
+            # 安全的模型名稱 gemini-1.5-flash
+            model_name = "gemini-1.5-flash" 
+            
             recent = st.session_state.messages[-12:]
             history_api = []
             for m in recent:
@@ -203,7 +226,7 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                 history_api.append({"role": role, "parts": [{"text": m["content"]}]})
             
             response = client.models.generate_content(
-                model="gemini-flash-latest", 
+                model=model_name, 
                 contents=history_api,
                 config={'system_instruction': SYSTEM_INSTRUCTION, 'temperature': 0.85}
             )
