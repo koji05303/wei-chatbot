@@ -203,7 +203,7 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                 history_api.append({"role": role, "parts": [{"text": m["content"]}]})
             
             response = client.models.generate_content(
-                model="gemini-1.5-flash", 
+                model="gemini-flash-latest", 
                 contents=history_api,
                 config={'system_instruction': SYSTEM_INSTRUCTION, 'temperature': 0.85}
             )
