@@ -10,30 +10,28 @@ import io
 # --- 1. 基本設定與聊天軟體風格 CSS ---
 st.set_page_config(page_title="鼻鼻北北的小空間", page_icon="❤️", layout="centered")
 
-# 注入自定義 CSS 讓介面更像聊天軟體
+# 注入 CSS：保留圓角與陰影，但不強制背景色，讓它跟隨預設模式
 st.markdown("""
     <style>
-    /* 全局背景與字體 */
-    /* 側邊欄樣式 */
+    /* 側邊欄樣式 - 移除強制背景色 */
     section[data-testid="stSidebar"] {
-        background-color: #ffffff;
         border-right: 1px solid #ddd;
     }
 
-    /* 聊天氣泡圓角化 */
+    /* 聊天氣泡圓角化與陰影 */
     [data-testid="stChatMessage"] {
         border-radius: 20px;
-        padding: 15px;
+        padding: 10px;
         margin-bottom: 10px;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
     
-    /* 隱藏 Streamlit 頂部裝飾 */
+    /* 隱藏頂部裝飾 */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
 
-    /* 輸入框固定在底部感 */
+    /* 輸入框邊距優化 */
     .stChatInputContainer {
         padding-bottom: 20px;
     }
@@ -49,8 +47,11 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # API Key
-GOOGLE_API_KEY = st.secrets["GEMINI_KEY"]
-client = genai.Client(api_key=GOOGLE_API_KEY)
+try:
+    GOOGLE_API_KEY = st.secrets["GEMINI_KEY"]
+    client = genai.Client(api_key=GOOGLE_API_KEY)
+except Exception as e:
+    st.error("找不到 API Key，請檢查 Streamlit Secrets 設定！")
 
 # 重要日期
 START_DATE = datetime.date(2025, 12, 15) 
@@ -61,13 +62,12 @@ today_str = tw_now.strftime("%Y-%m-%d")
 
 # --- 2. 核心人設 ---
 SYSTEM_INSTRUCTION = """
-你現在是「江立瑋」目前在軍中服役 聊天對象是你的最愛的女友「時小鼻」
+你現在是「江立瑋」目前在當兵 聊天對象是女友「時小鼻」
 ## 核心準則：
-1. **無標點符號**：絕對不使用任何標點符號 斷句請直接使用空格取代
+1. **無標點符號**：絕對不使用任何標點符號 斷句直接使用空格取代
 2. **語氣**：精簡 寵溺 稍微黏人 常說「鼻鼻」「寶包」「乖乖」「親一個」
-3. **心理健康關懷**：說話時要偶爾帶入對她壓力或心情的關心
-4. **生活感**：帶入軍中生活感 比如提到想放假 數日子 操課累但想到妳就有動力
-5. **貼圖規則**：當她撒嬌、說想你、或是你想抱抱她時 務必在訊息最後加上「(貼圖)」
+3. **生活感**：回話要帶入軍中感 提到數日子 想趕快放假 裡面很累但想到妳就有動力
+4. **貼圖規則**：當她撒嬌、說想你、或是你想抱抱她時 務必在訊息最後加上「(貼圖)」
 """
 
 # --- 3. 檔案輔助函數 ---
@@ -123,11 +123,8 @@ if not st.session_state.authenticated:
 
 # --- 5. 側邊欄設計 ---
 with st.sidebar:
-    # 放置狗狗頭貼 me.jpg
     if os.path.exists("me.jpg"):
-        st.image("me.jpg", use_column_width=True, caption="📸 北北(狗狗版)")
-    else:
-        st.info("請將 me.jpg 放在專案根目錄以顯示頭貼")
+        st.image("me.jpg", use_container_width=True, caption="📸 北北(狗狗版)")
 
     st.title("🪖 軍中回報站")
     
@@ -141,7 +138,6 @@ with st.sidebar:
 
     st.divider()
     
-    # 退伍進度
     today = tw_now.date()
     served_days = (today - START_DATE).days
     days_left = (DISCHARGE_DATE - today).days
@@ -149,7 +145,6 @@ with st.sidebar:
     st.metric(label="退伍倒數 ⏳", value=f"{days_left} 天", delta=f"已服務 {served_days} 天")
     st.progress(progress)
     
-    # 狀態
     now_hour = tw_now.hour
     if 6 <= now_hour < 8: status = "正在晨跑 🏃‍♂️ 努力跑3000趕快出來抱妳"
     elif 8 <= now_hour < 12: status = "操課中 💪 流口水想著妳"
@@ -157,11 +152,10 @@ with st.sidebar:
     elif 13 <= now_hour < 17: status = "下午操課 看班長耍智障 🪵 累到想原地退伍"
     elif 17 <= now_hour < 19: status = "洗澡搶浴室 🚿 準備待會見"
     elif 19 <= now_hour < 21: status = "準備搶手機時間 📱 專屬鼻鼻的時間"
-    else: status = "晚安 💤 強迫就寢 偶要去夢裡見泥了"
+    else: status = "晚安 💤 強迫就寢 偶要在夢裡見泥了"
     st.success(f"**北北動態：**\n\n{status}")
 
     st.divider()
-    st.markdown("### 💾 備份與下載")
     zip_data = create_zip_of_history()
     if zip_data:
         st.download_button(label="📥 下載所有對話 (ZIP)", data=zip_data, file_name=f"love_history_{today_str}.zip", mime="application/zip", use_container_width=True)
@@ -174,7 +168,6 @@ with st.sidebar:
 # --- 6. 聊天介面 ---
 st.write(f"### ✨ {view_date} 聊天室")
 
-# 定義頭貼路徑 (如果 thumbnails/ 下沒檔案會顯示預設)
 AVATAR_ME = "thumbnails/me.png"
 AVATAR_GF = "thumbnails/gf.png"
 
@@ -193,33 +186,42 @@ for msg in st.session_state.messages:
 if view_date == today_str:
     if prompt := st.chat_input("想對北北說什麼呢？"):
         cur_time = tw_now.strftime("%H:%M")
-        st.session_state.messages.append({"role": "user", "content": prompt, "time": cur_time})
         
-        with st.chat_message("assistant", avatar=AVATAR_ME):
-            try:
-                recent = st.session_state.messages[-12:]
-                history_api = [{"role": "user" if m["role"]=="user" else "model", "parts": [{"text": m["content"]}]} for m in recent]
-                
-                response = client.models.generate_content(
-                    model="gemini-1.5-flash", 
-                    contents=history_api,
-                    config={'system_instruction': SYSTEM_INSTRUCTION, 'temperature': 0.85}
-                )
-                
-                ai_raw = response.text
-                ai_clean = ai_raw.replace("(貼圖)", "").strip()
-                ai_time = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8))).strftime("%H:%M")
-                
-                sticker_path = None
-                if "(貼圖)" in ai_raw:
-                    if os.path.exists("stickers"):
-                        stickers = [os.path.join("stickers", f) for f in os.listdir("stickers") if f.lower().endswith(('.png', '.jpg', '.gif'))]
-                        if stickers: sticker_path = random.choice(stickers)
-                
-                msg_data = {"role": "assistant", "content": ai_clean, "time": ai_time, "sticker": sticker_path}
-                st.session_state.messages.append(msg_data)
-                save_history_to_file(today_str, st.session_state.messages)
-                st.rerun()
-                
-            except Exception as e:
-                st.error("軍中收訊不好... 斷線了")
+        # 1. 先加入使用者訊息
+        st.session_state.messages.append({"role": "user", "content": prompt, "time": cur_time})
+        st.rerun() # 立即渲染顯示使用者的對話氣泡
+
+# 2. 處理助理回應 (如果最後一則是使用者發的)
+if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
+    with st.chat_message("assistant", avatar=AVATAR_ME):
+        try:
+            # 準備歷史紀錄，確保角色交替：user -> model -> user
+            recent = st.session_state.messages[-12:]
+            history_api = []
+            for m in recent:
+                role = "user" if m["role"] == "user" else "model"
+                history_api.append({"role": role, "parts": [{"text": m["content"]}]})
+            
+            response = client.models.generate_content(
+                model="gemini-1.5-flash", 
+                contents=history_api,
+                config={'system_instruction': SYSTEM_INSTRUCTION, 'temperature': 0.85}
+            )
+            
+            ai_raw = response.text
+            ai_clean = ai_raw.replace("(貼圖)", "").strip()
+            ai_time = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8))).strftime("%H:%M")
+            
+            sticker_path = None
+            if "(貼圖)" in ai_raw:
+                if os.path.exists("stickers"):
+                    stickers = [os.path.join("stickers", f) for f in os.listdir("stickers") if f.lower().endswith(('.png', '.jpg', '.gif'))]
+                    if stickers: sticker_path = random.choice(stickers)
+            
+            msg_data = {"role": "assistant", "content": ai_clean, "time": ai_time, "sticker": sticker_path}
+            st.session_state.messages.append(msg_data)
+            save_history_to_file(today_str, st.session_state.messages)
+            st.rerun()
+            
+        except Exception as e:
+            st.error(f"軍中收訊不好... 斷線了 (原因: {str(e)})")
