@@ -4,9 +4,45 @@ import datetime
 import random
 import os
 import json
+import zipfile
+import io
 
-# --- 1. 基本設定 ---
+# --- 1. 基本設定與聊天軟體風格 CSS ---
 st.set_page_config(page_title="鼻鼻北北的小空間", page_icon="❤️", layout="centered")
+
+# 注入自定義 CSS 讓介面更像聊天軟體
+st.markdown("""
+    <style>
+    /* 全局背景與字體 */
+    .stApp {
+        background-color: #f0f2f5;
+    }
+    
+    /* 側邊欄樣式 */
+    section[data-testid="stSidebar"] {
+        background-color: #ffffff;
+        border-right: 1px solid #ddd;
+    }
+
+    /* 聊天氣泡圓角化 */
+    [data-testid="stChatMessage"] {
+        border-radius: 20px;
+        padding: 15px;
+        margin-bottom: 10px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    
+    /* 隱藏 Streamlit 頂部裝飾 */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+
+    /* 輸入框固定在底部感 */
+    .stChatInputContainer {
+        padding-bottom: 20px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
 # 初始化 Session State
 if "authenticated" not in st.session_state:
@@ -16,59 +52,60 @@ if "pass_input" not in st.session_state:
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# API Key 設定 (請在 Streamlit Cloud Secrets 設定 GEMINI_KEY)
+# API Key
 GOOGLE_API_KEY = st.secrets["GEMINI_KEY"]
 client = genai.Client(api_key=GOOGLE_API_KEY)
 
-# 重要日期設定
+# 重要日期
 START_DATE = datetime.date(2025, 12, 15) 
 DISCHARGE_DATE = datetime.date(2026, 3, 25) 
 TOTAL_DAYS = (DISCHARGE_DATE - START_DATE).days
-
-# 鎖定台灣時區
 tw_now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8)))
 today_str = tw_now.strftime("%Y-%m-%d")
 
-# --- 2. 核心人設 (SYSTEM_INSTRUCTION) ---
+# --- 2. 核心人設 ---
 SYSTEM_INSTRUCTION = """
-你現在是「江立瑋」，目前在軍中服役，聊天對象是你的最愛的女友「時小鼻」。
-
+你現在是「江立瑋」目前在軍中服役 聊天對象是你的最愛的女友「時小鼻」
 ## 核心準則：
-1. **無標點符號**：絕對不使用任何標點符號，斷句請直接使用「空格」取代。
-2. **語氣**：精簡、寵溺、稍微黏人。常說「鼻鼻」「寶包」「乖乖」「親一個」。
-3. **心理健康關懷**：說話時要偶爾帶入對她「壓力」或「心情任務」的關心。
-4. **生活感**：帶入軍中生活感，比如提到想放假、數日子、操課累但想到妳就有動力。
-5. **貼圖規則**：當她撒嬌、說想你、或是你想抱抱她時，務必在訊息最後加上「(貼圖)」。
+1. **無標點符號**：絕對不使用任何標點符號 斷句請直接使用空格取代
+2. **語氣**：精簡 寵溺 稍微黏人 常說「鼻鼻」「寶包」「乖乖」「親一個」
+3. **心理健康關懷**：說話時要偶爾帶入對她壓力或心情的關心
+4. **生活感**：帶入軍中生活感 比如提到想放假 數日子 操課累但想到妳就有動力
+5. **貼圖規則**：當她撒嬌、說想你、或是你想抱抱她時 務必在訊息最後加上「(貼圖)」
 """
 
-# --- 3. JSON 檔案輔助函數 ---
+# --- 3. 檔案輔助函數 ---
 HISTORY_FOLDER = "history"
 
 def save_history_to_file(date_str, messages):
-    if not os.path.exists(HISTORY_FOLDER):
-        os.makedirs(HISTORY_FOLDER)
+    if not os.path.exists(HISTORY_FOLDER): os.makedirs(HISTORY_FOLDER)
     with open(f"{HISTORY_FOLDER}/{date_str}.json", "w", encoding="utf-8") as f:
         json.dump(messages, f, ensure_ascii=False, indent=4)
 
 def load_history_from_file(date_str):
     file_path = f"{HISTORY_FOLDER}/{date_str}.json"
     if os.path.exists(file_path):
-        with open(file_path, "r", encoding="utf-8") as f:
-            return json.load(f)
+        with open(file_path, "r", encoding="utf-8") as f: return json.load(f)
     return []
 
 def get_all_history_dates():
-    if not os.path.exists(HISTORY_FOLDER):
-        return []
+    if not os.path.exists(HISTORY_FOLDER): return []
     files = [f.replace(".json", "") for f in os.listdir(HISTORY_FOLDER) if f.endswith(".json")]
     return sorted(files, reverse=True)
 
+def create_zip_of_history():
+    if not os.path.exists(HISTORY_FOLDER) or not os.listdir(HISTORY_FOLDER): return None
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for root, _, files in os.walk(HISTORY_FOLDER):
+            for file in files: zf.write(os.path.join(root, file), file)
+    return buf.getvalue()
+
 # --- 4. 解鎖畫面 ---
 if not st.session_state.authenticated:
-    st.write("<h1 style='text-align: center;'>🔐 認證身分</h1>", unsafe_allow_html=True)
+    st.write("<h1 style='text-align: center; color: #ff4b4b;'>❤️ 鼻鼻北北的小空間</h1>", unsafe_allow_html=True)
     pass_display = " ".join(["●" if i < len(st.session_state.pass_input) else "○" for i in range(4)])
     st.write(f"<h2 style='text-align: center; letter-spacing: 10px;'>{pass_display}</h2>", unsafe_allow_html=True)
-
     col1, col2, col3 = st.columns([1, 1, 1])
     keys = [["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"], ["清空", "0", "←"]]
     for j, row in enumerate(keys):
@@ -79,9 +116,8 @@ if not st.session_state.authenticated:
                     elif key == "←": st.session_state.pass_input = st.session_state.pass_input[:-1]
                     elif len(st.session_state.pass_input) < 4: st.session_state.pass_input += key
                     st.rerun()
-
-    if st.button("🔓 確認解鎖", use_container_width=True):
-        if st.session_state.pass_input == "1028": # 直接判斷密碼
+    if st.button("🔓 進入聊天室", use_container_width=True):
+        if st.session_state.pass_input == "1028":
             st.session_state.authenticated = True
             st.rerun()
         else:
@@ -89,73 +125,83 @@ if not st.session_state.authenticated:
             st.session_state.pass_input = ""
     st.stop()
 
-# --- 5. 側邊欄 ---
+# --- 5. 側邊欄設計 ---
 with st.sidebar:
-    st.title("🪖 北北軍中回報站")
+    # 放置狗狗頭貼 me.jpg
+    if os.path.exists("me.jpg"):
+        st.image("me.jpg", use_column_width=True, caption="📸 北北(狗狗版)")
+    else:
+        st.info("請將 me.jpg 放在專案根目錄以顯示頭貼")
+
+    st.title("🪖 軍中回報站")
     
-    # 日期切換
     all_dates = get_all_history_dates()
     if today_str not in all_dates: all_dates.insert(0, today_str)
-    view_date = st.selectbox("📅 歷史紀錄", all_dates, index=0)
+    view_date = st.selectbox("📅 選擇聊天日期", all_dates, index=0)
     
-    # 讀取對應日期的紀錄
     if "current_view_date" not in st.session_state or st.session_state.current_view_date != view_date:
         st.session_state.current_view_date = view_date
         st.session_state.messages = load_history_from_file(view_date)
 
     st.divider()
     
-    # 進度計算
+    # 退伍進度
     today = tw_now.date()
     served_days = (today - START_DATE).days
     days_left = (DISCHARGE_DATE - today).days
     progress = max(0.0, min(1.0, served_days / TOTAL_DAYS))
-    st.metric(label="退伍倒數 ⏳", value=f"{days_left} 天", delta=f"已撐過 {served_days} 天")
+    st.metric(label="退伍倒數 ⏳", value=f"{days_left} 天", delta=f"已服務 {served_days} 天")
     st.progress(progress)
     
-    # 時間狀態
+    # 狀態
     now_hour = tw_now.hour
-    if 6 <= now_hour < 8: status = "正在晨跑 🏃‍♂️ 努力變壯抱妳"
-    elif 8 <= now_hour < 12: status = "操課中 💪 汗流浹背但想著妳"
-    elif 12 <= now_hour < 13: status = "放飯囉 🍛 希望妳也有乖乖吃飯"
-    elif 13 <= now_hour < 17: status = "下午操課 🪵 累到想原地退伍"
-    elif 17 <= now_hour < 19: status = "洗澡搶水 🚿 準備待會見"
-    elif 19 <= now_hour < 21: status = "手機時間 📱 專屬鼻鼻的時間"
-    else: status = "晚安 💤 夢裡去見妳了"
-    st.info(f"**北北現在狀態：**\n\n{status}")
+    if 6 <= now_hour < 8: status = "正在晨跑 🏃‍♂️ 努力跑3000趕快出來抱妳"
+    elif 8 <= now_hour < 12: status = "操課中 💪 流口水想著妳"
+    elif 12 <= now_hour < 13: status = "放飯吃廚餘囉 🍛 鼻鼻要多吃一點"
+    elif 13 <= now_hour < 17: status = "下午操課 看班長耍智障 🪵 累到想原地退伍"
+    elif 17 <= now_hour < 19: status = "洗澡搶浴室 🚿 準備待會見"
+    elif 19 <= now_hour < 21: status = "準備搶手機時間 📱 專屬鼻鼻的時間"
+    else: status = "晚安 💤 強迫就寢 偶要去夢裡見泥了"
+    st.success(f"**北北動態：**\n\n{status}")
 
-    if st.button("登出並上鎖"):
+    st.divider()
+    st.markdown("### 💾 備份與下載")
+    zip_data = create_zip_of_history()
+    if zip_data:
+        st.download_button(label="📥 下載所有對話 (ZIP)", data=zip_data, file_name=f"love_history_{today_str}.zip", mime="application/zip", use_container_width=True)
+
+    if st.button("🚪 登出並上鎖", use_container_width=True):
         st.session_state.authenticated = False
         st.session_state.pass_input = ""
         st.rerun()
 
 # --- 6. 聊天介面 ---
-st.title(f"✨ {view_date} 聊天室")
+st.write(f"### ✨ {view_date} 聊天室")
 
+# 定義頭貼路徑 (如果 thumbnails/ 下沒檔案會顯示預設)
 AVATAR_ME = "thumbnails/me.png"
 AVATAR_GF = "thumbnails/gf.png"
 
 for msg in st.session_state.messages:
-    avatar = AVATAR_ME if msg["role"] == "assistant" else AVATAR_GF
-    name = "北北 立瑋" if msg["role"] == "assistant" else "鼻鼻 小鼻"
+    is_ai = msg["role"] == "assistant"
+    avatar = AVATAR_ME if is_ai else AVATAR_GF
+    name = "北北 立瑋" if is_ai else "鼻鼻 小鼻"
+    
     with st.chat_message(msg["role"], avatar=avatar):
-        st.caption(f"{name} • {msg.get('time', '未知時間')}")
+        st.markdown(f"**{name}** <span style='color:gray; font-size:0.8em;'>{msg.get('time', '')}</span>", unsafe_allow_html=True)
         st.markdown(msg["content"])
         if "sticker" in msg and msg["sticker"]:
-            st.image(msg["sticker"], width=180)
+            st.image(msg["sticker"], width=160)
 
-# 發送新訊息 (僅限今天)
+# 發送新訊息
 if view_date == today_str:
-    if prompt := st.chat_input("想跟北北說什麼？"):
+    if prompt := st.chat_input("想對北北說什麼呢？"):
         cur_time = tw_now.strftime("%H:%M")
-        
-        # 1. 使用者訊息加入
         st.session_state.messages.append({"role": "user", "content": prompt, "time": cur_time})
         
-        # 2. 呼叫 Gemini
         with st.chat_message("assistant", avatar=AVATAR_ME):
             try:
-                recent = st.session_state.messages[-10:]
+                recent = st.session_state.messages[-12:]
                 history_api = [{"role": "user" if m["role"]=="user" else "model", "parts": [{"text": m["content"]}]} for m in recent]
                 
                 response = client.models.generate_content(
@@ -168,21 +214,16 @@ if view_date == today_str:
                 ai_clean = ai_raw.replace("(貼圖)", "").strip()
                 ai_time = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8))).strftime("%H:%M")
                 
-                # 貼圖邏輯
                 sticker_path = None
                 if "(貼圖)" in ai_raw:
                     if os.path.exists("stickers"):
                         stickers = [os.path.join("stickers", f) for f in os.listdir("stickers") if f.lower().endswith(('.png', '.jpg', '.gif'))]
-                        if stickers:
-                            sticker_path = random.choice(stickers)
+                        if stickers: sticker_path = random.choice(stickers)
                 
-                # 3. 儲存回應並刷新
                 msg_data = {"role": "assistant", "content": ai_clean, "time": ai_time, "sticker": sticker_path}
                 st.session_state.messages.append(msg_data)
-                
-                # 存檔
                 save_history_to_file(today_str, st.session_state.messages)
                 st.rerun()
                 
             except Exception as e:
-                st.error(f"北北斷線了：{e}")
+                st.error("軍中收訊不好... 斷線了")
