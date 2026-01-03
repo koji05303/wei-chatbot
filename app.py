@@ -26,23 +26,44 @@ st.markdown("""
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
     
-    /* 修正 Bug 2: 移除對 header 的隱藏，否則側邊欄按鈕會不見 */
-    /* header {visibility: hidden;}  <-- 這行是兇手，先註解掉 */
+    /* 顯示側邊欄按鈕 (Streamlit 頂部導覽列) */
+    /* 不要隱藏 header，否則漢堡選單會不見 */
+    /* header {visibility: hidden;} */
     
     #MainMenu {visibility: hidden;} /* 隱藏右上角三點選單 */
-    footer {visibility: hidden;}    /* 隱藏頁尾 "Made with Streamlit" */
+    footer {visibility: hidden;}    /* 隱藏頁尾 */
 
     /* 輸入框邊距優化 */
     .stChatInputContainer {
         padding-bottom: 20px;
     }
     
-    /* 修正 Bug 1: 優化九宮格按鈕樣式 */
+    /* --- 關鍵修正：手機版九宮格強制不跑版 --- */
+    
+    /* 1. 調整按鈕樣式：高度適中，字體放大 */
     div.stButton > button {
         width: 100%;
-        border-radius: 10px;
-        height: 50px;
-        font-size: 20px;
+        border-radius: 12px;
+        height: 60px; /* 增加高度讓手機好點 */
+        font-size: 24px !important;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    /* 2. 強制 columns 在手機上保持水平排列 (重要!) */
+    [data-testid="column"] {
+        width: 33.33% !important;
+        flex: 1 1 33.33% !important;
+        min-width: 50px !important; /* 防止被擠到消失 */
+    }
+    
+    /* 針對輸入密碼區域的圓點顯示優化 */
+    .pass-dots {
+        text-align: center; 
+        letter-spacing: 15px; 
+        font-size: 30px; 
+        margin-bottom: 20px;
+        font-family: monospace;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -110,27 +131,30 @@ def create_zip_of_history():
 if not st.session_state.authenticated:
     st.write("<h1 style='text-align: center; color: #ff4b4b;'>❤️ 鼻鼻北北的小空間</h1>", unsafe_allow_html=True)
     
-    # 顯示密碼圓點
+    # 顯示密碼圓點 (使用 CSS class 優化排版)
     pass_display = " ".join(["●" if i < len(st.session_state.pass_input) else "○" for i in range(4)])
-    st.write(f"<h2 style='text-align: center; letter-spacing: 10px; margin-bottom: 30px;'>{pass_display}</h2>", unsafe_allow_html=True)
+    st.markdown(f"<div class='pass-dots'>{pass_display}</div>", unsafe_allow_html=True)
     
-    # --- 修正 Bug 1: 改用更穩定的九宮格排版 ---
-    keys = [["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"], ["清空", "0", "←"]]
-    
-    for row in keys:
-        cols = st.columns(3) # 每一列重新建立 3 個欄位，確保對齊
-        for i, key in enumerate(row):
-            with cols[i]:
-                if st.button(key, use_container_width=True, key=f"key_{key}"):
-                    if key == "清空": 
-                        st.session_state.pass_input = ""
-                        st.rerun()
-                    elif key == "←": 
-                        st.session_state.pass_input = st.session_state.pass_input[:-1]
-                        st.rerun()
-                    elif len(st.session_state.pass_input) < 4: 
-                        st.session_state.pass_input += key
-                        st.rerun()
+    # --- 九宮格按鈕區域 ---
+    # 使用 container 來包裹，避免版面太寬
+    with st.container():
+        keys = [["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"], ["清空", "0", "←"]]
+        
+        for row in keys:
+            # 這裡的 columns 配合上面的 CSS [data-testid="column"] 強制寬度 33%
+            cols = st.columns(3)
+            for i, key in enumerate(row):
+                with cols[i]:
+                    if st.button(key, use_container_width=True, key=f"key_{key}"):
+                        if key == "清空": 
+                            st.session_state.pass_input = ""
+                            st.rerun()
+                        elif key == "←": 
+                            st.session_state.pass_input = st.session_state.pass_input[:-1]
+                            st.rerun()
+                        elif len(st.session_state.pass_input) < 4: 
+                            st.session_state.pass_input += key
+                            st.rerun()
 
     st.write("---")
     if st.button("🔓 進入聊天室", use_container_width=True):
@@ -195,7 +219,7 @@ AVATAR_GF = "thumbnails/gf.png"
 for msg in st.session_state.messages:
     is_ai = msg["role"] == "assistant"
     avatar = AVATAR_ME if is_ai else AVATAR_GF
-    name = "北北 2-028 江立瑋" if is_ai else "鼻鼻 小鼻"
+    name = "北北 立瑋" if is_ai else "鼻鼻 小鼻"
     
     with st.chat_message(msg["role"], avatar=avatar):
         st.markdown(f"**{name}** <span style='color:gray; font-size:0.8em;'>{msg.get('time', '')}</span>", unsafe_allow_html=True)
@@ -217,7 +241,7 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
     with st.chat_message("assistant", avatar=AVATAR_ME):
         try:
             # 安全的模型名稱 gemini-1.5-flash
-            model_name = "gemini-1.5-flash" 
+            model_name = "gemini-flash-latest" 
             
             recent = st.session_state.messages[-12:]
             history_api = []
