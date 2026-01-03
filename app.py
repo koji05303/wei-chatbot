@@ -7,18 +7,13 @@ import json
 import zipfile
 import io
 
-# --- 1. 基本設定與聊天軟體風格 CSS ---
+# --- 1. 基本設定 ---
 st.set_page_config(page_title="鼻鼻北北的小空間", page_icon="❤️", layout="centered")
 
-# 注入 CSS
+# 注入 CSS：只保留最基本的按鈕優化，不強制干涉排版
 st.markdown("""
     <style>
-    /* 側邊欄樣式 */
-    section[data-testid="stSidebar"] {
-        border-right: 1px solid #ddd;
-    }
-
-    /* 聊天氣泡圓角化與陰影 */
+    /* 聊天氣泡 */
     [data-testid="stChatMessage"] {
         border-radius: 20px;
         padding: 10px;
@@ -26,49 +21,32 @@ st.markdown("""
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
     
-    /* 顯示側邊欄按鈕 (Streamlit 頂部導覽列) */
-    /* 不要隱藏 header，否則漢堡選單會不見 */
-    /* header {visibility: hidden;} */
+    /* 隱藏選單 */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
     
-    #MainMenu {visibility: hidden;} /* 隱藏右上角三點選單 */
-    footer {visibility: hidden;}    /* 隱藏頁尾 */
-
-    /* 輸入框邊距優化 */
-    .stChatInputContainer {
-        padding-bottom: 20px;
-    }
-    
-    /* --- 關鍵修正：手機版九宮格強制不跑版 --- */
-    
-    /* 1. 調整按鈕樣式：高度適中，字體放大 */
+    /* 按鈕樣式優化：大一點好按 */
     div.stButton > button {
         width: 100%;
-        border-radius: 12px;
-        height: 60px; /* 增加高度讓手機好點 */
-        font-size: 24px !important;
-        font-weight: bold;
-        margin-bottom: 5px;
-    }
-
-    /* 2. 強制 columns 在手機上保持水平排列 (重要!) */
-    [data-testid="column"] {
-        width: 33.33% !important;
-        flex: 1 1 33.33% !important;
-        min-width: 50px !important; /* 防止被擠到消失 */
+        height: 70px; /* 特大按鈕 */
+        font-size: 28px !important;
+        border-radius: 15px;
+        margin-bottom: 10px;
     }
     
-    /* 針對輸入密碼區域的圓點顯示優化 */
+    /* 密碼圓點樣式 */
     .pass-dots {
         text-align: center; 
-        letter-spacing: 15px; 
-        font-size: 30px; 
+        font-size: 40px; 
+        letter-spacing: 20px;
         margin-bottom: 20px;
-        font-family: monospace;
+        color: #ff4b4b;
+        font-weight: bold;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# 初始化 Session State
+# --- 2. 初始化 Session State ---
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 if "pass_input" not in st.session_state:
@@ -76,12 +54,18 @@ if "pass_input" not in st.session_state:
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# 關鍵：將隨機按鈕順序存起來，不然每次按按鈕都會亂跳
+if "shuffled_keys" not in st.session_state:
+    keys = ["1", "0", "2", "8"]
+    random.shuffle(keys)
+    st.session_state.shuffled_keys = keys
+
 # API Key
 try:
     GOOGLE_API_KEY = st.secrets["GEMINI_KEY"]
     client = genai.Client(api_key=GOOGLE_API_KEY)
 except Exception as e:
-    st.error("找不到 API Key，請檢查 Streamlit Secrets 設定！")
+    st.error("找不到 API Key，請檢查 Secrets！")
 
 # 重要日期
 START_DATE = datetime.date(2025, 12, 15) 
@@ -90,7 +74,7 @@ TOTAL_DAYS = (DISCHARGE_DATE - START_DATE).days
 tw_now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8)))
 today_str = tw_now.strftime("%Y-%m-%d")
 
-# --- 2. 核心人設 ---
+# --- 3. 核心人設 ---
 SYSTEM_INSTRUCTION = """
 你現在是「江立瑋」目前在當兵 聊天對象是女友「時小鼻」
 ## 核心準則：
@@ -100,7 +84,7 @@ SYSTEM_INSTRUCTION = """
 4. **貼圖規則**：當她撒嬌、說想你、或是你想抱抱她時 務必在訊息最後加上「(貼圖)」
 """
 
-# --- 3. 檔案輔助函數 ---
+# --- 4. 檔案輔助函數 ---
 HISTORY_FOLDER = "history"
 
 def save_history_to_file(date_str, messages):
@@ -127,55 +111,74 @@ def create_zip_of_history():
             for file in files: zf.write(os.path.join(root, file), file)
     return buf.getvalue()
 
-# --- 4. 解鎖畫面 ---
+# --- 5. 解鎖畫面 (極簡版) ---
 if not st.session_state.authenticated:
-    st.write("<h1 style='text-align: center; color: #ff4b4b;'>❤️ 鼻鼻北北的小空間</h1>", unsafe_allow_html=True)
+    st.write("<br>", unsafe_allow_html=True)
+    st.write("<h1 style='text-align: center;'>❤️ 專屬小空間</h1>", unsafe_allow_html=True)
     
-    # 顯示密碼圓點 (使用 CSS class 優化排版)
+    # 顯示輸入進度 (圓點)
     pass_display = " ".join(["●" if i < len(st.session_state.pass_input) else "○" for i in range(4)])
     st.markdown(f"<div class='pass-dots'>{pass_display}</div>", unsafe_allow_html=True)
     
-    # --- 九宮格按鈕區域 ---
-    # 使用 container 來包裹，避免版面太寬
-    with st.container():
-        keys = [["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"], ["清空", "0", "←"]]
-        
-        for row in keys:
-            # 這裡的 columns 配合上面的 CSS [data-testid="column"] 強制寬度 33%
-            cols = st.columns(3)
-            for i, key in enumerate(row):
-                with cols[i]:
-                    if st.button(key, use_container_width=True, key=f"key_{key}"):
-                        if key == "清空": 
-                            st.session_state.pass_input = ""
-                            st.rerun()
-                        elif key == "←": 
-                            st.session_state.pass_input = st.session_state.pass_input[:-1]
-                            st.rerun()
-                        elif len(st.session_state.pass_input) < 4: 
-                            st.session_state.pass_input += key
-                            st.rerun()
+    # 2x2 排列按鈕 (最穩定的排法)
+    keys = st.session_state.shuffled_keys
+    
+    # 第一排
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button(keys[0], use_container_width=True):
+            if len(st.session_state.pass_input) < 4:
+                st.session_state.pass_input += keys[0]
+                st.rerun()
+    with c2:
+        if st.button(keys[1], use_container_width=True):
+            if len(st.session_state.pass_input) < 4:
+                st.session_state.pass_input += keys[1]
+                st.rerun()
+    
+    # 第二排
+    c3, c4 = st.columns(2)
+    with c3:
+        if st.button(keys[2], use_container_width=True):
+            if len(st.session_state.pass_input) < 4:
+                st.session_state.pass_input += keys[2]
+                st.rerun()
+    with c4:
+        if st.button(keys[3], use_container_width=True):
+            if len(st.session_state.pass_input) < 4:
+                st.session_state.pass_input += keys[3]
+                st.rerun()
 
-    st.write("---")
-    if st.button("🔓 進入聊天室", use_container_width=True):
-        if st.session_state.pass_input == "1028":
-            st.session_state.authenticated = True
-            st.rerun()
-        else:
-            st.error("密碼錯誤 鼻鼻再想一下！")
+    st.write("<br>", unsafe_allow_html=True)
+
+    # 底部功能鍵 (清除 & 登入)
+    b1, b2 = st.columns(2)
+    with b1:
+        if st.button("🗑️ 重打", use_container_width=True):
             st.session_state.pass_input = ""
+            st.rerun()
+    with b2:
+        # 特別標示登入按鈕
+        if st.button("🔓 進入", type="primary", use_container_width=True):
+            if st.session_state.pass_input == "1028":
+                st.session_state.authenticated = True
+                st.rerun()
+            else:
+                st.error("密碼錯誤！")
+                st.session_state.pass_input = ""
+                st.rerun()
     st.stop()
 
-# --- 5. 側邊欄設計 ---
+# --- 6. 側邊欄 ---
 with st.sidebar:
     if os.path.exists("me.jpg"):
-        st.image("me.jpg", use_container_width=True, caption="📸 北北(狗狗版)")
+        st.image("me.jpg", use_container_width=True, caption="📸 北北")
 
     st.title("🪖 軍中回報站")
     
     all_dates = get_all_history_dates()
     if today_str not in all_dates: all_dates.insert(0, today_str)
-    view_date = st.selectbox("📅 選擇聊天日期", all_dates, index=0)
+    view_date = st.selectbox("📅 紀錄", all_dates, index=0)
     
     if "current_view_date" not in st.session_state or st.session_state.current_view_date != view_date:
         st.session_state.current_view_date = view_date
@@ -187,31 +190,31 @@ with st.sidebar:
     served_days = (today - START_DATE).days
     days_left = (DISCHARGE_DATE - today).days
     progress = max(0.0, min(1.0, served_days / TOTAL_DAYS))
-    st.metric(label="退伍倒數 ⏳", value=f"{days_left} 天", delta=f"已服務 {served_days} 天")
+    st.metric(label="退伍倒數", value=f"{days_left} 天", delta=f"{served_days} 天")
     st.progress(progress)
     
     now_hour = tw_now.hour
     if 6 <= now_hour < 8: status = "正在晨跑 🏃‍♂️ 努力跑3000趕快出來抱妳"
     elif 8 <= now_hour < 12: status = "操課中 💪 流口水想著妳"
     elif 12 <= now_hour < 13: status = "放飯吃廚餘囉 🍛 鼻鼻要多吃一點"
-    elif 13 <= now_hour < 17: status = "下午操課 看班長耍智障 🪵 累到想原地退伍"
+    elif 13 <= now_hour < 17: status = "下午操課 🪵 累到想原地退伍"
     elif 17 <= now_hour < 19: status = "洗澡搶浴室 🚿 準備待會見"
     elif 19 <= now_hour < 21: status = "準備搶手機時間 📱 專屬鼻鼻的時間"
     else: status = "晚安 💤 強迫就寢 偶要在夢裡見泥了"
-    st.success(f"**北北動態：**\n\n{status}")
+    st.info(f"{status}")
 
     st.divider()
     zip_data = create_zip_of_history()
     if zip_data:
-        st.download_button(label="📥 下載所有對話 (ZIP)", data=zip_data, file_name=f"love_history_{today_str}.zip", mime="application/zip", use_container_width=True)
+        st.download_button(label="📥 備份紀錄 (ZIP)", data=zip_data, file_name=f"love_history_{today_str}.zip", mime="application/zip", use_container_width=True)
 
-    if st.button("🚪 登出並上鎖", use_container_width=True):
+    if st.button("🚪 登出", use_container_width=True):
         st.session_state.authenticated = False
         st.session_state.pass_input = ""
         st.rerun()
 
-# --- 6. 聊天介面 ---
-st.write(f"### ✨ {view_date} 聊天室")
+# --- 7. 聊天介面 ---
+st.write(f"### ✨ {view_date}")
 
 AVATAR_ME = "thumbnails/me.png"
 AVATAR_GF = "thumbnails/gf.png"
@@ -229,20 +232,17 @@ for msg in st.session_state.messages:
 
 # 發送新訊息
 if view_date == today_str:
-    if prompt := st.chat_input("想對北北說什麼呢？"):
+    if prompt := st.chat_input("..."):
         cur_time = tw_now.strftime("%H:%M")
         
-        # 1. 先加入使用者訊息
         st.session_state.messages.append({"role": "user", "content": prompt, "time": cur_time})
         st.rerun() 
 
-# 2. 處理助理回應
+# 處理助理回應
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
     with st.chat_message("assistant", avatar=AVATAR_ME):
         try:
-            # 安全的模型名稱 gemini-1.5-flash
             model_name = "gemini-flash-latest" 
-            
             recent = st.session_state.messages[-12:]
             history_api = []
             for m in recent:
@@ -271,4 +271,4 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
             st.rerun()
             
         except Exception as e:
-            st.error(f"軍中收訊不好... 斷線了 (原因: {str(e)})")
+            st.error(f"連線錯誤: {str(e)}")
