@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "my-love-app-483205",
+  "private_key_id": "904f4d94b22f1bf773e5dc0020185f6abd415b2e",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDlA0+UxfDFVYME\nJJNZ6Td3hBJvub/mvJQwxvuCzxuI0Kua/Nx6KZT30MBdxA/APgyMgXa8tpq/E0/P\nuKsC7xa9voE4LLf2wkx5LwLH8l6RHZHNEt6MGqvNz80+YunP8v7EaYnehmk8wIxs\nQMEaiibF7+gusZucAybEZ2AvJ/PlZ78cJrcVHWMZ4stB5vt3slmx9ygqUzzh3n9q\nD/QsCEvZQ8LV1CRHUBx+xkP0+bbEWvh6ZXmRUdu+5IFCzdJHMye4GuPoa68mq7KF\nOGoU8Buv/k0g5eW8AMOEd5GAGSu/NujubDDPaAyJbgLhMuZoDXe5IWPcQs4F0sbj\n4C/YqzHRAgMBAAECggEAJomFV4NslgRjAOw3uIpQeWXp5U+kXYtPw5qEYdmAqGf2\n7KSO5GbBaOdBq7WtsduvKGizxqNSzIMPK+UHL/30PXdEjuOljFpbXIwe428jXzeS\n3KfHd9uYHBDTGKOz9TiOixY4a1ACfwTmzGOkKxdi2W2azFq6VQlJuYSs0JqgRfK7\nHk/epoH+RO5UsUE7HnnpslzUdxqPh2F0viaHGnX6klM8DVbpzdXZdlUg8mKviWsj\nYXDJRwwrHFaUS68eHD5enyvmMLpVg+Qam3tZppLvXPh+atxXgQC996XvOtCoTBXb\ns7DcV7Eqdp0QOpJ7TOzXE2hnvXt5ZoOg57UrzaKrXQKBgQDyLkYdDzUtw3FgE7BC\nctJTvT0RGC1j+988ONrqZZXl9WIYDxdBsCRJFLYWZXorEdGxP8do9SpH+UKxlt6u\nIapwfUyQ6fwzZ1TN0T/zLG7/9SMOMRtF9d43lh2oHpmZO5x/zR1kFbXYREWXXekm\n2NEi8RppM2abI3p74QxFcmrs/QKBgQDyFK8kJNjIWRq7dI0f9uH1IbUe5qtI5bIZ\nZnyRvY3pHNVlYQZLEqBmpp5IO2lVIfANmzz3FdDWeAssJAd5Kvjg+j/zJN09rpOo\n1xfODsxU9U33t2gZZZj2kxvKVtEuY+nltTtem2Es2lYZ6mVVjxrPuU4GddUvcW4K\nLj2HezIaZQKBgHfPWLRrn51iQSaM1vgoodD3n8xjL6F1K705S2QGmZ/IQ50vagv/\nPhRBgMuXrFa+XATaTqaoEyDEObBtuQBge1dnRYezmic8CYJA8Og2pTtPZOZSePGl\nbygExes0KDzcdtHrAY1QCERTkjIOLZggT2Z/7Nb6rNo3NRMwBMgekLNpAoGAPh9U\nup/CCdfj5ksIlDVU0wUtZ5qmRfS7+Yy1Vukf67x8fqGhbc5/3xfO8pZcd35YDgXS\nZU3x47e2lkNAr7V5XLKbipfhNp0AQ4m/EB/4C61PrswgKLRLxqsFrK0OzSrSsSIK\n9EJHc60r/0aJbqVkqf3RqhK+/IfNR0uKeqQAvYkCgYEAhKekpyEZAceaJhVpLypU\nggDkuMPW0wD+n6ESBZ2mCIUUYOmO+a0oFrxfSQammSIKb81SZc76JpGKxM+NMjkm\nQvl4VPSCXo+t44EvyJLUc3O2HfrJbyRyjz+Vj/FHHQxWN+flIeKB98GaWbPHO+ja\nrddFGtZLh4lkPzvyPL+6UMQ=\n-----END PRIVATE KEY-----\n",
+  "client_email": "historybackup@my-love-app-483205.iam.gserviceaccount.com",
+  "client_id": "107417875487511797509",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/historybackup%40my-love-app-483205.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
